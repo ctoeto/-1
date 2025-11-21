@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Приз дня</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin:0;
+    padding:0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100%;
+    background: #f0f0f0;
+}
+#prize-card {
+    border:2px solid #ccc;
+    border-radius:15px;
+    padding:15px;
+    background: rgba(255,255,255,0.9);
+    text-align:center;
+    box-shadow:0 0 10px rgba(0,0,0,0.1);
+    width:250px;
+}
+#prize-img {
+    width:175px;
+    height:175px;
+    object-fit:cover;
+    border-radius:10px;
+    margin-bottom:10px;
+    transition: opacity 0.8s ease-in-out;
+}
+#prize-img.merc { opacity:0.7; }
+</style>
+</head>
+<body>
+<div id="prize-card">
+    <div id="prize-date"></div>
+    <img id="prize-img" src="" alt="prize">
+    <div id="prize-text" style="font-weight:bold; margin-bottom:10px;"></div>
+    <div id="prize-timer"></div>
+</div>
+
+<script>
+const prizes = [
+    { img: "https://i.imgur.com/4AiXzf8.jpeg", text: "Удача +10" },
+    { img: "https://i.imgur.com/8Km9tLL.jpeg", text: "Харизма +1" },
+    { img: "https://i.imgur.com/Q7m9f4R.jpeg", text: "Котик дня" },
+    { img: "https://i.imgur.com/W5b8xO4.jpeg", text: "Магическая энергия" },
+    { img: "https://i.imgur.com/Wo3sq0E.jpeg", text: "Сила духа +5" },
+    { img: "https://i.imgur.com/kY2Z8zP.jpeg", text: "Радость дня" }
+];
+
+function getMoscowDate() {
+    const now = new Date();
+    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+    return new Date(utc + 3*3600000);
+}
+function formatDate(d){ return d.toISOString().split("T")[0]; }
+
+function pickPrize() {
+    const history = JSON.parse(localStorage.getItem("prizeHistory")||"[]");
+    const available = prizes.filter(p=>!history.some(h=>h.text===p.text));
+    const pool = available.length ? available : prizes;
+    const chosen = pool[Math.floor(Math.random()*pool.length)];
+    history.unshift({ ...chosen, date: formatDate(getMoscowDate()) });
+    if(history.length>30) history.length=30;
+    localStorage.setItem("prizeHistory", JSON.stringify(history));
+    return chosen;
+}
+
+function showPrize(){
+    const today=formatDate(getMoscowDate());
+    let prize;
+    const savedDate=localStorage.getItem("prizeDate");
+    if(savedDate!==today||!localStorage.getItem("prizeData")){
+        prize=pickPrize();
+        localStorage.setItem("prizeDate",today);
+        localStorage.setItem("prizeData",JSON.stringify(prize));
+    }else{
+        prize=JSON.parse(localStorage.getItem("prizeData"));
+    }
+
+    document.getElementById("prize-date").textContent="Приз дня — "+today;
+    const img=document.getElementById("prize-img");
+    img.src=prize.img;
+    img.classList.add("merc");
+    setTimeout(()=>img.classList.remove("merc"),1500);
+    document.getElementById("prize-text").textContent=prize.text;
+}
+
+function updateTimer(){
+    const now=getMoscowDate();
+    const tomorrow=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,0,0);
+    const diff=tomorrow-now;
+    const h=Math.floor(diff/1000/60/60);
+    const m=Math.floor((diff/1000/60)%60);
+    const s=Math.floor((diff/1000)%60);
+    document.getElementById("prize-timer").textContent=
+        `Следующий приз через: ${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+    if(localStorage.getItem("prizeDate")!==formatDate(getMoscowDate())) showPrize();
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+    showPrize();
+    setInterval(updateTimer,1000);
+});
+</script>
+</body>
+</html>
